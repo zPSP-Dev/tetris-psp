@@ -57,8 +57,8 @@ pub fn build(b: *Builder) void {
     };
 
     const generate_prx = b.addSystemCommand(&[_][]const u8{
-        "src/Zig-PSP/tools/bin/prxgen" ++ append,
-        "src/Zig-PSP/zig-cache/main",
+        "./src/Zig-PSP/tools/bin/prxgen" ++ append,
+        "zig-cache/main",
         "app.prx"
     });
     generate_prx.step.dependOn(&prx.step);
@@ -90,7 +90,7 @@ pub fn build(b: *Builder) void {
 
     //Pack the PBP executable
     const pack_pbp = b.addSystemCommand(&[_][]const u8{
-        "src/Zig-PSP/tools/bin/pbptool" ++ append, "pack",
+        "./src/Zig-PSP/tools/bin/pbptool" ++ append, "pack",
         "EBOOT.PBP",
         "PARAM.SFO",
         icon0,
