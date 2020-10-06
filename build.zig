@@ -25,7 +25,7 @@ pub fn build(b: *Builder) void {
 
     //All of the release modes work
     //Debug Mode can cause issues with trap instructions - use ReleaseSafe for "Debug" builds
-    const mode = builtin.Mode.ReleaseSafe;
+    const mode = builtin.Mode.ReleaseSmall;
 
     //Build from your main file!
     const exe = b.addExecutable("main", "src/main.zig");
