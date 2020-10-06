@@ -1,6 +1,7 @@
 const psp = @import("Zig-PSP/src/psp/utils/psp.zig");
 const gfx = @import("gfx.zig");
 usingnamespace @import("Zig-PSP/src/psp/include/psprtc.zig");
+usingnamespace @import("Zig-PSP/src/psp/include/pspdisplay.zig");
 
 var current_time : u64 = 0;
 var tickRate : u32 = 0;
@@ -533,5 +534,6 @@ pub fn main() !void {
         checkRows();
 
         gfx.swapBuffers();
+        _ = sceDisplayWaitVblankStart();
     }
 }
