@@ -2,6 +2,7 @@ const psp = @import("Zig-PSP/src/psp/utils/psp.zig");
 const gfx = @import("gfx.zig");
 usingnamespace @import("Zig-PSP/src/psp/include/psprtc.zig");
 usingnamespace @import("Zig-PSP/src/psp/include/pspdisplay.zig");
+usingnamespace @import("Zig-PSP/src/psp/include/psploadexec.zig");
 
 var current_time : u64 = 0;
 var tickRate : u32 = 0;
@@ -446,6 +447,16 @@ fn bottomCollided() bool{
     return false;
 }
 
+fn topCollided() bool{
+    var i : usize = 0;
+    while(i < activePiece.count) : (i += 1){
+        if(activePiece.block[i].y + activePiece.y >= 20){
+            return true;
+        }
+    }
+    return false;
+}
+
 fn addPieceToBoard() void {
     var i : usize = 0;
     while(i < activePiece.count) : (i += 1){
@@ -527,8 +538,12 @@ pub fn main() !void {
         
         if(bottomCollided()){
             activePiece.y += 1;
-            addPieceToBoard();
-            newPiece();
+            if(topCollided()){
+                sceKernelExitGame();
+            }else{
+                addPieceToBoard();
+                newPiece();
+            }
         }
 
         checkRows();
