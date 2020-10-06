@@ -1,5 +1,9 @@
 const psp = @import("Zig-PSP/src/psp/utils/psp.zig");
 const gfx = @import("gfx.zig");
+usingnamespace @import("Zig-PSP/src/psp/include/psprtc.zig");
+
+var current_time : u64 = 0;
+var tickRate : u32 = 0;
 
 comptime {
     asm(psp.module_info("zTetris", 0, 1, 0));
@@ -232,18 +236,18 @@ pub const PieceType = enum(u8) {
 };
 
 pub const Block = struct{
-    x: usize,
-    y: usize,
-    color: u32,
+    x: i32,
+    y: i32,
 };
 
 pub const Piece = struct{
-    x: usize, 
-    y: usize,
+    x: i32, 
+    y: i32,
     orietation: usize,
     ptype: PieceType,
     block: [4]Block,
     count: usize,
+    color: u32,
 };
 
 pub var activePiece : Piece = undefined;
@@ -275,9 +279,9 @@ fn drawBlock(x : usize, y : usize) void{
     gfx.drawRect(26 + x * block_side, 26 + y * block_side, block_side - 4, block_side - 4, grid[y][x]);
 }
 
-fn drawBlockCol(x : usize, y : usize, color : u32) void{
-    gfx.drawRect(24 + x * block_side, 24 + y * block_side, block_side, block_side, 0xFF000000);
-    gfx.drawRect(26 + x * block_side, 26 + y * block_side, block_side - 4, block_side - 4, color);
+fn drawBlockCol(x : i32, y : i32, color : u32) void{
+    gfx.drawRect(@intCast(u32, 24 + x * @intCast(i32, block_side)), @intCast(u32, 24 + y * @intCast(i32, block_side)), block_side, block_side, 0xFF000000);
+    gfx.drawRect(@intCast(u32, 26 + x * @intCast(i32, block_side)), @intCast(u32, 26 + y * @intCast(i32, block_side)), block_side - 4, block_side - 4, color);
 }
 
 fn drawBlocks() void {
@@ -293,7 +297,7 @@ fn drawBlocks() void {
 fn drawPiece() void {
     var i : usize = 0;
     while(i < 4) : (i += 1){
-        drawBlockCol(activePiece.block[i].y + activePiece.y, activePiece.block[i].x + activePiece.x, activePiece.block[i].color);
+        drawBlockCol(activePiece.block[i].y + activePiece.y, activePiece.block[i].x + activePiece.x, activePiece.color);
     }
 }
 
@@ -306,31 +310,149 @@ fn newPiece() void {
     activePiece.x = 0;
     activePiece.y = 20;
     activePiece.count = 0;
-    activePiece.orietation = r.random.uintLessThanBiased(u8, 4);
+    activePiece.orietation = 0;
 
-    var color : usize = r.random.uintLessThanBiased(usize, 8);
+    activePiece.color = colorArray[r.random.uintLessThanBiased(usize, 8)];
 
-    var i : usize = 0;
+    var i : i32 = 0;
     while(i < 16) : (i += 1){
-        if(pieceData[@enumToInt(activePiece.ptype)][activePiece.orietation][i] != 0){
-            var x : usize = i % 4;
-            var y : usize = i / 4;
+        if(pieceData[@enumToInt(activePiece.ptype)][activePiece.orietation][@intCast(usize, i)] != 0){
+            var x : i32 = @rem(i, 4);
+            var y : i32 = @divTrunc(i, 4);
 
             activePiece.block[activePiece.count].x = x;
             activePiece.block[activePiece.count].y = y;
-            activePiece.block[activePiece.count].color = colorArray[color];
             activePiece.count += 1;
         }
     }
 }
 
+fn rightWallCollided() bool {
+    var i : usize = 0;
+    while(i < activePiece.count) : (i += 1){
+        if(activePiece.block[i].x + activePiece.x >= tetris_columns){
+            return true;
+        }
+    }
+    return false;
+}
+
+fn leftWallCollided() bool {
+    var i : usize = 0;
+    while(i < activePiece.count) : (i += 1){
+        if(activePiece.block[i].x + activePiece.x < 0){
+            return true;
+        }
+    }
+    return false;
+}
+
+fn getCell(x : usize, y : usize) bool {
+    if(y < 0 or y >= tetris_columns or x < 0 or x >= tetris_rows){
+        return false;
+    }
+    return grid[y][x] != 0xff111111;
+}
+
+fn gridCollided() bool {
+    var i : usize = 0;
+    while(i < activePiece.count) : (i += 1){
+        if(getCell(activePiece.x + activePiece.block[i].x, activePiece.y + activePiece.block[i].y)){
+            return true;
+        }
+    }
+    return false;
+}
+
+
+const control = @import("Zig-PSP/src/psp/include/pspctrl.zig");
+
+var oldPadData : control.SceCtrlData = undefined;
+var newPadData : control.SceCtrlData = undefined;
+fn handleInput() void{
+    oldPadData = newPadData;
+    _ = control.sceCtrlReadBufferPositive(&newPadData, 1);
+
+    if(oldPadData.Buttons != newPadData.Buttons){
+        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_LEFT)) != 0){
+            activePiece.x -= 1;
+            if(leftWallCollided()){
+                activePiece.x += 1;
+            }
+            //TODO: Grid Check
+        }
+
+        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_RIGHT)) != 0){
+            activePiece.x += 1;
+            if(rightWallCollided()){
+                activePiece.x -= 1;
+            }
+            //TODO: Grid Check
+        }
+
+        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_DOWN)) != 0){
+            activePiece.y -= 1;
+        }
+
+        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_UP)) != 0){
+            rotate();
+        }
+    }
+}
+
+fn rotate() void{
+    var blockBack: [4]Block = activePiece.block;
+
+    activePiece.orietation += 1;
+    activePiece.orietation %= 4;
+    activePiece.count = 0;
+
+    var i : i32 = 0;
+    while(i < 16) : (i += 1){
+        if(pieceData[@enumToInt(activePiece.ptype)][activePiece.orietation][@intCast(usize, i)] != 0){
+            var x : i32 = @rem(i, 4);
+            var y : i32 = @divTrunc(i, 4);
+
+            activePiece.block[activePiece.count].x = x;
+            activePiece.block[activePiece.count].y = y;
+            activePiece.count += 1;
+        }
+    }
+
+    if(leftWallCollided()){
+        activePiece.x += 1;
+        while(leftWallCollided()){
+            activePiece.x += 1;
+        }
+    } 
+    
+    if(rightWallCollided()){
+        activePiece.x -= 1;
+        while(rightWallCollided()){
+            activePiece.x -= 1;
+        }
+    }
+
+    //TODO: GRID CHECK
+}
+
 pub fn main() !void {
+    oldPadData.Buttons = 0;
+    newPadData.Buttons = 0;
     psp.utils.enableHBCB();
     gfx.init();
+
+    _ = control.sceCtrlSetSamplingCycle(0);
+    _ = control.sceCtrlSetSamplingMode(@enumToInt(control.PspCtrlMode.PSP_CTRL_MODE_ANALOG));
 
     initBlocks();
     grid[9][23] = 0xFFFF_FFFF;
     newPiece();
+    
+    tickRate = sceRtcGetTickResolution();
+    _ = sceRtcGetCurrentTick(&current_time);
+
+    var timer : f64 = 0.0;
 
     while(true){
         //Clear screen
@@ -346,6 +468,20 @@ pub fn main() !void {
         drawBlocks();
         drawPiece();
 
+        var oldTime = current_time;
+        _ = sceRtcGetCurrentTick(&current_time);
+        var delta = current_time - oldTime;
+        var deltaF = @intToFloat(f64, delta) / @intToFloat(f64, tickRate);
+
+        timer += deltaF;
+        if(timer > 0.5){
+            timer = 0.0;
+            //Tick
+            activePiece.y -= 1;
+        }
+
+        handleInput();
+        
         gfx.swapBuffers();
     }
 }
