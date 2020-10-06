@@ -348,16 +348,16 @@ fn leftWallCollided() bool {
 }
 
 fn getCell(x : usize, y : usize) bool {
-    if(y < 0 or y >= tetris_columns or x < 0 or x >= tetris_rows){
+    if(y < 0 or y >= tetris_rows or x < 0 or x >= tetris_columns){
         return false;
     }
-    return grid[y][x] != 0xff111111;
+    return grid[x][y] != 0xff111111;
 }
 
 fn gridCollided() bool {
     var i : usize = 0;
     while(i < activePiece.count) : (i += 1){
-        if(getCell(activePiece.x + activePiece.block[i].x, activePiece.y + activePiece.block[i].y)){
+        if(getCell(@intCast(usize, activePiece.x + activePiece.block[i].x), @intCast(usize, activePiece.y + activePiece.block[i].y))){
             return true;
         }
     }
@@ -376,15 +376,14 @@ fn handleInput() void{
     if(oldPadData.Buttons != newPadData.Buttons){
         if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_LEFT)) != 0){
             activePiece.x -= 1;
-            if(leftWallCollided()){
+            if(leftWallCollided() or gridCollided()){
                 activePiece.x += 1;
             }
-            //TODO: Grid Check
         }
 
         if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_RIGHT)) != 0){
             activePiece.x += 1;
-            if(rightWallCollided()){
+            if(rightWallCollided() or gridCollided()){
                 activePiece.x -= 1;
             }
             //TODO: Grid Check
@@ -436,6 +435,49 @@ fn rotate() void{
     //TODO: GRID CHECK
 }
 
+fn bottomCollided() bool{
+    var i : usize = 0;
+    while(i < activePiece.count) : (i += 1){
+        if(activePiece.block[i].y + activePiece.y < 0 or gridCollided()){
+            return true;
+        }
+    }
+    return false;
+}
+
+fn addPieceToBoard() void {
+    var i : usize = 0;
+    while(i < activePiece.count) : (i += 1){
+        grid[@intCast(usize, activePiece.block[i].x + activePiece.x)][@intCast(usize, activePiece.block[i].y + activePiece.y)] = activePiece.color;
+    }
+}
+
+fn checkRows() void {
+
+    var y : usize = 0;
+    while(y < tetris_rows) : (y += 1){
+        var cleared : bool = true;
+        var x : usize = 0;
+        while(x < tetris_columns) : (x += 1){
+            if(grid[x][y] == 0xff111111){
+                cleared = false;
+            }
+        }
+
+        if(cleared){
+
+            var i : usize = 0;
+            while(i < tetris_columns) : (i += 1){
+                var j : usize = 0;
+                while(j < (tetris_rows - 1)) : (j += 1){
+                    grid[j][i] = grid[j][i + 1];
+                }
+                grid[j][tetris_rows-1] = 0xff111111;
+            }
+        }
+    }
+}
+
 pub fn main() !void {
     oldPadData.Buttons = 0;
     newPadData.Buttons = 0;
@@ -446,12 +488,12 @@ pub fn main() !void {
     _ = control.sceCtrlSetSamplingMode(@enumToInt(control.PspCtrlMode.PSP_CTRL_MODE_ANALOG));
 
     initBlocks();
-    grid[9][23] = 0xFFFF_FFFF;
-    newPiece();
     
     tickRate = sceRtcGetTickResolution();
     _ = sceRtcGetCurrentTick(&current_time);
-
+    r = std.rand.DefaultPrng.init(current_time);
+    newPiece();
+    
     var timer : f64 = 0.0;
 
     while(true){
@@ -482,6 +524,14 @@ pub fn main() !void {
 
         handleInput();
         
+        if(bottomCollided()){
+            activePiece.y += 1;
+            addPieceToBoard();
+            newPiece();
+        }
+
+        checkRows();
+
         gfx.swapBuffers();
     }
 }
