@@ -376,14 +376,14 @@ fn handleInput() void{
     _ = control.sceCtrlReadBufferPositive(&newPadData, 1);
 
     if(oldPadData.Buttons != newPadData.Buttons){
-        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_LEFT)) != 0){
+        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_UP)) != 0){
             activePiece.x -= 1;
             if(leftWallCollided() or gridCollided()){
                 activePiece.x += 1;
             }
         }
 
-        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_RIGHT)) != 0){
+        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_DOWN)) != 0){
             activePiece.x += 1;
             if(rightWallCollided() or gridCollided()){
                 activePiece.x -= 1;
@@ -391,11 +391,11 @@ fn handleInput() void{
             //TODO: Grid Check
         }
 
-        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_DOWN)) != 0){
+        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_LEFT)) != 0){
             activePiece.y -= 1;
         }
 
-        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_UP)) != 0){
+        if(newPadData.Buttons & @bitCast(c_uint, @enumToInt(control.PspCtrlButtons.PSP_CTRL_RIGHT)) != 0){
             rotate();
         }
     }
