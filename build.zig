@@ -9,6 +9,7 @@ const icon1 = "NULL"; //REPLACE WITH PATH TO ICON1.PMF 144 x 80 animation
 const pic0 = "NULL"; //REPLACE WITH PATH TO PIC0.PNG 480 x 272 Background
 const pic1 = "NULL"; //REPLACE WITH PATH TO PIC1.PMF 480 x 272 Animation
 const snd0 = "NULL"; //REPLACE WITH PATH TO SND0.AT3 Music
+const psp_app_name = "zTetris";
 
 pub fn build(b: *Builder) void {
     
@@ -73,8 +74,8 @@ pub fn build(b: *Builder) void {
 
     //Make the SFO file
     const mk_sfo = b.addSystemCommand(&[_][]const u8{
-        "./src/Zig-PSP/tools/bin/sfotool" ++ append, "parse",
-        "sfo.json",
+        "./src/Zig-PSP/tools/bin/sfotool" ++ append, "write",
+        psp_app_name,
         "PARAM.SFO"
     });
     mk_sfo.step.dependOn(&sfo.step);
@@ -86,7 +87,7 @@ pub fn build(b: *Builder) void {
     PBP.setBuildMode(builtin.Mode.ReleaseFast);
     PBP.setOutputDir("src/Zig-PSP/tools/bin");
     PBP.install();
-    PBP.step.dependOn(&mk_sfo.step);
+    PBP.step.dependOn(&generate_prx.step);
 
     //Pack the PBP executable
     const pack_pbp = b.addSystemCommand(&[_][]const u8{

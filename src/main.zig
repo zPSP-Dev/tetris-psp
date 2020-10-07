@@ -473,15 +473,16 @@ fn checkRows() void {
         while(x < tetris_columns) : (x += 1){
             if(grid[x][y] == 0xff111111){
                 cleared = false;
+                break;
             }
         }
 
         if(cleared){
 
-            var i : usize = 0;
-            while(i < tetris_columns) : (i += 1){
+            var i : usize = y;
+            while(i < tetris_rows) : (i += 1){
                 var j : usize = 0;
-                while(j < (tetris_rows - 1)) : (j += 1){
+                while(j < (tetris_columns - 1)) : (j += 1){
                     grid[j][i] = grid[j][i + 1];
                 }
                 grid[j][tetris_rows-1] = 0xff111111;
