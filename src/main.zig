@@ -478,15 +478,17 @@ fn checkRows() void {
         }
 
         if(cleared){
+            //We clear this line and above
 
             var i : usize = y;
-            while(i < tetris_rows) : (i += 1){
+            //I is this line
+            while(i < (tetris_rows-4)) : (i += 1){
                 var j : usize = 0;
-                while(j < (tetris_columns - 1)) : (j += 1){
+                while(j < tetris_columns) : (j += 1){
                     grid[j][i] = grid[j][i + 1];
                 }
-                grid[j][tetris_rows-1] = 0xff111111;
             }
+
         }
     }
 }
